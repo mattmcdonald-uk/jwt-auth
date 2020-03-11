@@ -13,6 +13,7 @@ namespace Tymon\JWTAuth;
 
 use BadMethodCallException;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Tymon\JWTAuth\Exceptions\JWTException;
 use Tymon\JWTAuth\Http\Parser\Parser;
@@ -101,8 +102,13 @@ class JWT
     public function refresh($forceForever = false, $resetClaims = false)
     {
         $this->requireToken();
+        $this->manager->setRefreshFlow();
 
-        return $this->manager->customClaims($this->getCustomClaims())
+        if (! $user = $this->authenticate()) {
+            throw new UnauthorizedHttpException('jwt-auth', 'User not found');
+        }
+
+        return $this->manager->customClaims($this->getClaimsArray($user))
                              ->refresh($this->token, $forceForever, $resetClaims)
                              ->get();
     }
